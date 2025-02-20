@@ -65,12 +65,25 @@ async def get_phone_number(msg: types.Message, state: FSMContext):
         await state.update_data(phone_number=msg.text)
     elif msg.contact.phone_number:
         await state.update_data(phone_number=msg.contact.phone_number)
+    await msg.answer("Yoshingizni kiriting: ")
+    await state.set_state(UserRegisterState.age)
+
+@dp.message(UserRegisterState.age)
+async def get_age(msg: types.Message, state: FSMContext):
+    await state.update_data(age=msg.text)
+    await msg.answer("Manzilingizni kiriting: ")
+    await state.set_state(UserRegisterState.address)
+
+@dp.message(UserRegisterState.address)
+async def get_address(msg: types.Message, state: FSMContext):
+    await state.update_data(address=msg.text)
     data = await state.get_data()
-    await msg.answer(f"Ism: {data['full_name']}\n"
-                     f"Telefon: {data['phone_number']}")
+    text = (f"Ism: {data['full_name']}\n"
+            f"Tel. raqam: {data['phone_number']}\n"
+            f"Age: {data['age']}\n"
+            f"Address: {data['address']}")
+    await msg.answer(text)
     await state.clear()
-
-
 
 
 async def main():
@@ -80,3 +93,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+get_video()
+get_image()
