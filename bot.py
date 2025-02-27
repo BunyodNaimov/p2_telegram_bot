@@ -6,9 +6,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, CallbackQuery
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
-from keyboards import register_inl_btn, get_phone_btn
+from keyboards import register_inl_btn, get_phone_btn, add_product_btn
 from states import UserRegisterState
 from database import db
+
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -16,13 +17,18 @@ bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
 
-
-
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    await message.answer("Do'konimizga xush kelibsiz!\n"
-                         "Ro'yxatdan o'ting!", reply_markup=register_inl_btn)
+    user = db.get_telegram_user_from_db(message.from_user.id)
+    if user:
+        await message.answer("Do'konimizga xush kelibsiz!")
+        if user.get("is_seller"):
 
+            await message.answer("Mahsulot qo'shishingiz mumkun:",
+                                 reply_markup=add_product_btn)
+    else:
+        await message.answer("Do'konimizga xush kelibsiz!\n"
+                             "Ro'yxatdan o'ting!", reply_markup=register_inl_btn)
 
 
 @dp.message(Command("help"))
@@ -53,11 +59,13 @@ async def user_register(call: CallbackQuery, state: FSMContext):
 
     await call.message.answer("Ismingizni kiriting:")
 
+
 @dp.message(UserRegisterState.full_name)
 async def get_full_name(msg: types.Message, state: FSMContext):
     await state.update_data(full_name=msg.text)
     await state.set_state(UserRegisterState.phone_number)
     await msg.answer("Telefon raqamingizni kiriting: ", reply_markup=get_phone_btn)
+
 
 @dp.message(UserRegisterState.phone_number)
 async def get_phone_number(msg: types.Message, state: FSMContext):
@@ -68,11 +76,13 @@ async def get_phone_number(msg: types.Message, state: FSMContext):
     await msg.answer("Yoshingizni kiriting: ")
     await state.set_state(UserRegisterState.age)
 
+
 @dp.message(UserRegisterState.age)
 async def get_age(msg: types.Message, state: FSMContext):
     await state.update_data(age=msg.text)
     await msg.answer("Manzilingizni kiriting: ")
     await state.set_state(UserRegisterState.address)
+
 
 @dp.message(UserRegisterState.address)
 async def get_address(msg: types.Message, state: FSMContext):
@@ -82,11 +92,9 @@ async def get_address(msg: types.Message, state: FSMContext):
     phone_number = data["phone_number"]
     age = data["age"]
     address = data["address"]
-    print(f"Full name: {full_name}"
-          f"\nPhone number: {phone_number}"
-          f"\nAge: {age}"
-          f"\nAddress: {address}")
-    db.add_to_users(full_name, phone_number, age, address)
+    telegram_id = msg.from_user.id
+
+    db.add_to_users(full_name, phone_number, age, address, telegram_id)
 
     await msg.answer("Malumotlaringiz saqlandi!")
     await state.clear()
@@ -99,6 +107,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-get_video()
-get_image()
